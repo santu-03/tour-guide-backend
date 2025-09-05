@@ -1,0 +1,133 @@
+# ----------------------------
+# Node & dependencies
+# ----------------------------
+node_modules/
+.pnp/
+.pnp.js
+
+# ----------------------------
+# Logs & diagnostics
+# ----------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+pino-*.log
+
+# ----------------------------
+# Runtime data / PIDs
+# ----------------------------
+pids
+*.pid
+*.pid.lock
+
+# ----------------------------
+# Tests & coverage
+# ----------------------------
+coverage/
+.nyc_output/
+coverage.lcov
+
+# ----------------------------
+# Build output (if any)
+# ----------------------------
+dist/
+build/
+out/
+
+# ----------------------------
+# Caches & temp
+# ----------------------------
+.cache/
+.tmp/
+temp/
+tmp/
+.eslintcache
+.stylelintcache
+.turbo/
+.rpt2_cache/
+.parcel-cache/
+
+# ----------------------------
+# Environment files
+# (keep only example templates)
+# ----------------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# ----------------------------
+# MongoDB (local data & dumps)
+# ----------------------------
+/data/
+/data/db/
+/db/
+/mongodb-data/
+/mongo-data/
+dump/
+*.bson
+*.bson.gz
+*.archive
+*.metadata.json
+WiredTiger*
+*.wt
+journal/
+diagnostic.data/
+mongod.lock
+
+# ----------------------------
+# Uploads & generated assets
+# (multer, temp, etc.)
+# ----------------------------
+uploads/
+public/uploads/
+storage/
+tmp/uploads/
+public/temp/
+
+# ----------------------------
+# SSL certs/keys (dev)
+# ----------------------------
+*.pem
+*.key
+*.crt
+certs/
+
+# ----------------------------
+# Editors & IDEs
+# ----------------------------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ----------------------------
+# OS files
+# ----------------------------
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# ----------------------------
+# Docker (local overrides)
+# ----------------------------
+docker-compose.override.yml
+
+# ----------------------------
+# Misc
+# ----------------------------
+*.swp
+*.tgz
+*~
