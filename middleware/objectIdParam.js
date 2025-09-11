@@ -1,9 +1,11 @@
-import mongoose from 'mongoose';
+import createError from "http-errors";
 
-export const validateObjectIdParam = (param) => (req, res, next) => {
-  const val = req.params[param];
-  if (!mongoose.Types.ObjectId.isValid(val)) {
-    return res.status(400).json({ success: false, message: `Invalid ${param}` });
+const OBJECT_ID_RE = /^[a-fA-F0-9]{24}$/;
+
+export const validateObjectIdParam = (paramName = "id") => (req, _res, next) => {
+  const id = req.params[paramName];
+  if (!id || !OBJECT_ID_RE.test(id)) {
+    return next(createError(400, `Invalid ObjectId for param "${paramName}"`));
   }
   next();
 };

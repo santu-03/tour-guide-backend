@@ -1,12 +1,12 @@
-import { Router } from 'express';
-import { auth } from '../middleware/auth.js';
-import { validate } from '../middleware/validation.js';
-import { reviewSchema } from '../utils/validators.js';
-import { addReview, listReviews } from '../controllers/reviewController.js';
+import { Router } from "express";
+import { requireAuth } from "../middleware/auth.js";
+import { validateObjectIdParam } from "../middleware/objectIdParam.js";
+import { createReview, listReviews, deleteReview } from "../controllers/reviewController.js";
 
 const r = Router();
 
-r.get('/', listReviews);
-r.post('/', auth, validate(reviewSchema), addReview);
+r.get("/", listReviews);
+r.post("/", requireAuth, createReview);
+r.delete("/:id", requireAuth, validateObjectIdParam("id"), deleteReview);
 
 export default r;

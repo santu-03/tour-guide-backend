@@ -1,39 +1,33 @@
-import jwt from 'jsonwebtoken';
-import httpStatus from 'http-status';
-import { fail } from '../utils/helpers.js';
-import { ROLES } from '../config/constants.js';
-import Session from '../models/Session.js';
-import User from '../models/User.js';
+import jwt from "jsonwebtoken";
+import createError from "http-errors";
+import { User } from "../models/User.js";
 
-export const auth = async (req, res, next) => {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
-  if (!token) return fail(res, httpStatus.UNAUTHORIZED, 'Missing Authorization header');
+const getJwtSecret = () => (process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || "").trim();
 
+export const requireAuth = async (req, _res, next) => {
   try {
-    const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-    req.user = await User.findById(payload.sub).select('-password');
-    if (!req.user) return fail(res, httpStatus.UNAUTHORIZED, 'User not found');
+    const header = req.headers.authorization || "";
+    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token) throw createError(401, "Missing token");
+
+    const secret = getJwtSecret();
+    if (!secret) throw createError(500, "JWT secret missing");
+
+    const decoded = jwt.verify(token, secret);
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) throw createError(401, "Invalid token");
+
+    req.user = user;
     next();
-  } catch (e) {
-    return fail(res, httpStatus.UNAUTHORIZED, 'Invalid/expired token');
+  } catch (err) {
+    if (err?.name === "TokenExpiredError") return next(createError(401, "Token expired"));
+    if (err?.name === "JsonWebTokenError") return next(createError(401, "Invalid token"));
+    next(createError(401, "Unauthorized"));
   }
 };
 
-export const authorize = (...allowed) => (req, res, next) => {
-  if (!req.user) return fail(res, httpStatus.UNAUTHORIZED, 'Not authenticated');
-  if (allowed.length && !allowed.includes(req.user.role)) {
-    return fail(res, httpStatus.FORBIDDEN, 'Insufficient permissions');
-  }
-  next();
-};
-
-// refresh token guard (for logout/rotation)
-export const requireSession = async (req, res, next) => {
-  const { refreshToken } = req.body;
-  if (!refreshToken) return fail(res, httpStatus.BAD_REQUEST, 'Missing refreshToken');
-  const session = await Session.findOne({ refreshToken, valid: true });
-  if (!session) return fail(res, httpStatus.UNAUTHORIZED, 'Invalid refresh token');
-  req.sessionDoc = session;
+export const requireRole = (...roles) => (req, _res, next) => {
+  if (!req.user) return next(createError(401, "Unauthorized"));
+  if (!roles.includes(req.user.role)) return next(createError(403, "Forbidden"));
   next();
 };

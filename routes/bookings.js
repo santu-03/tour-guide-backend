@@ -1,13 +1,18 @@
-import { Router } from 'express';
-import { auth } from '../middleware/auth.js';
-import { validate } from '../middleware/validation.js';
-import { bookingSchema } from '../utils/validators.js';
-import { createBooking, myBookings, updateStatus } from '../controllers/bookingController.js';
+import { Router } from "express";
+import { requireAuth, requireRole } from "../middleware/auth.js";
+import { validateObjectIdParam } from "../middleware/objectIdParam.js";
+import {
+  createBooking,
+  myBookings,
+  allBookings,
+  updateBookingStatus,
+} from "../controllers/bookingController.js";
 
 const r = Router();
 
-r.get('/me', auth, myBookings);
-r.post('/', auth, validate(bookingSchema), createBooking);
-r.patch('/:id/status', auth, updateStatus);
+r.post("/", requireAuth, createBooking);
+r.get("/me", requireAuth, myBookings);
+r.get("/", requireAuth, requireRole("admin"), allBookings);
+r.patch("/:id/status", requireAuth, requireRole("admin"), validateObjectIdParam("id"), updateBookingStatus);
 
 export default r;

@@ -1,19 +1,26 @@
-// import mongoose from 'mongoose';
-// import { PAYMENT_STATUS } from '../config/constants.js';
+import mongoose from "mongoose";
 
-// const paymentSchema = new mongoose.Schema(
-//   {
-//     provider: { type: String, default: 'razorpay' },
-//     status: { type: String, enum: Object.values(PAYMENT_STATUS), default: PAYMENT_STATUS.CREATED },
-//     currency: { type: String, default: 'INR' },
-//     amount: { type: Number, required: true }, // in paise
-//     orderId: String,
-//     paymentId: String,
-//     signature: String,
-//     booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
-//     meta: {}
-//   },
-//   { timestamps: true }
-// );
+const paymentSchema = new mongoose.Schema(
+  {
+    provider: { type: String, enum: ["stripe", "razorpay", "mock"], default: "mock", index: true },
+    amount: { type: Number, required: true, min: 0 },
+    currency: { type: String, default: "INR" },
+    status: { type: String, enum: ["created", "paid", "failed", "refunded"], default: "created", index: true },
+    providerRef: { type: String, index: true }, // e.g., order_id or payment_id
+    meta: { type: Object, default: {} },
+  },
+  { timestamps: true }
+);
 
-// export default mongoose.model('Payment', paymentSchema);
+paymentSchema.index({ status: 1, createdAt: -1 });
+
+paymentSchema.set("toJSON", {
+  transform: (_doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
+export const Payment = mongoose.model("Payment", paymentSchema);

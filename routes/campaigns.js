@@ -1,13 +1,21 @@
-import { Router } from 'express';
-import { auth, authorize } from '../middleware/auth.js';
-import { validate } from '../middleware/validation.js';
-import { campaignSchema } from '../utils/validators.js';
-import { createCampaign, listCampaigns, updateCampaign } from '../controllers/campaignController.js';
+import { Router } from "express";
+import { requireAuth, requireRole } from "../middleware/auth.js";
+import { validateObjectIdParam } from "../middleware/objectIdParam.js";
+import {
+  createCampaign,
+  listCampaigns,
+  getCampaign,
+  updateCampaign,
+  deleteCampaign,
+} from "../controllers/campaignController.js";
 
 const r = Router();
 
-r.get('/', auth, authorize('advisor'), listCampaigns);
-r.post('/', auth, authorize('advisor'), validate(campaignSchema), createCampaign);
-r.patch('/:id', auth, authorize('advisor'), updateCampaign);
+r.get("/", listCampaigns);
+r.get("/:id", validateObjectIdParam("id"), getCampaign);
+
+r.post("/", requireAuth, requireRole("admin"), createCampaign);
+r.put("/:id", requireAuth, requireRole("admin"), validateObjectIdParam("id"), updateCampaign);
+r.delete("/:id", requireAuth, requireRole("admin"), validateObjectIdParam("id"), deleteCampaign);
 
 export default r;

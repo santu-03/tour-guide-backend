@@ -1,10 +1,12 @@
-// import { Router } from 'express';
-// import { auth } from '../middleware/auth.js';
-// import { createRazorpayOrder, verifyRazorpay } from '../controllers/paymentController.js';
+import { Router } from "express";
+import { requireAuth, requireRole } from "../middleware/auth.js";
+import { validateObjectIdParam } from "../middleware/objectIdParam.js";
+import { createPayment, markPaid, listPayments } from "../controllers/paymentController.js";
 
-// const r = Router();
+const r = Router();
 
-// r.post('/razorpay/order', auth, createRazorpayOrder);
-// r.post('/razorpay/verify', verifyRazorpay); // webhook or client-confirm
+r.post("/", requireAuth, createPayment);
+r.get("/", requireAuth, requireRole("admin"), listPayments);
+r.patch("/:id/paid", requireAuth, requireRole("admin"), validateObjectIdParam("id"), markPaid);
 
-// export default r;
+export default r;

@@ -1,84 +1,47 @@
-// import httpStatus from 'http-status';
-// import Review from '../models/Review.js';
-// import Activity from '../models/Activity.js';
-// import Place from '../models/Place.js';
-// import { paginate, send } from '../utils/helpers.js';
+import createError from "http-errors";
+import { z } from "zod";
+import { Review } from "../models/Review.js";
 
-// export const addReview = async (req, res) => {
-//   const review = await Review.create({ ...req.body, user: req.user._id });
-//   // naive rating aggregation
-//   if (review.targetType === 'activity') {
-//     const agg = await Review.aggregate([
-//       { $match: { targetType: 'activity', targetId: review.targetId } },
-//       { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } }
-//     ]);
-//     await Activity.findByIdAndUpdate(review.targetId, { rating: agg[0]?.avg || 0, ratingCount: agg[0]?.count || 0 });
-//   } else if (review.targetType === 'place') {
-//     const agg = await Review.aggregate([
-//       { $match: { targetType: 'place', targetId: review.targetId } },
-//       { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } }
-//     ]);
-//     await Place.findByIdAndUpdate(review.targetId, { rating: agg[0]?.avg || 0, ratingCount: agg[0]?.count || 0 });
-//   }
-//   return send(res, httpStatus.CREATED, review);
-// };
+const schema = z.object({
+  placeId: z.string().length(24).optional(),
+  activityId: z.string().length(24).optional(),
+  rating: z.number().int().min(1).max(5),
+  comment: z.string().max(1000).optional(),
+}).refine((d) => d.placeId || d.activityId, { message: "placeId or activityId required" });
 
-// export const listReviews = async (req, res) => {
-//   const { skip, limit, page } = paginate(req.query);
-//   const filter = {};
-//   if (req.query.targetType) filter.targetType = req.query.targetType;
-//   if (req.query.targetId) filter.targetId = req.query.targetId;
-//   const items = await Review.find(filter).populate('user', 'name avatarUrl').skip(skip).limit(limit).sort({ createdAt: -1 });
-//   const total = await Review.countDocuments(filter);
-//   return send(res, httpStatus.OK, { items, page, total });
-// };
-
-
-
-import httpStatus from 'http-status';
-import mongoose from 'mongoose';
-import Review from '../models/Review.js';
-import Activity from '../models/Activity.js';
-import Place from '../models/Place.js';
-import { paginate, send } from '../utils/helpers.js';
-
-const ALLOWED_TARGETS = new Set(['activity', 'place']);
-
-export const addReview = async (req, res) => {
-  const { targetType, targetId } = req.body;
-
-  if (!ALLOWED_TARGETS.has(targetType)) {
-    return res.status(httpStatus.BAD_REQUEST).json({ success: false, message: 'Invalid targetType' });
-  }
-  if (!mongoose.Types.ObjectId.isValid(targetId)) {
-    return res.status(httpStatus.BAD_REQUEST).json({ success: false, message: 'Invalid targetId' });
-  }
-
-  const review = await Review.create({ ...req.body, user: req.user._id });
-
-  // quick rating aggregation
-  if (review.targetType === 'activity') {
-    const agg = await Review.aggregate([
-      { $match: { targetType: 'activity', targetId: review.targetId } },
-      { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } }
-    ]);
-    await Activity.findByIdAndUpdate(review.targetId, { rating: agg[0]?.avg || 0, ratingCount: agg[0]?.count || 0 });
-  } else if (review.targetType === 'place') {
-    const agg = await Review.aggregate([
-      { $match: { targetType: 'place', targetId: review.targetId } },
-      { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } }
-    ]);
-    await Place.findByIdAndUpdate(review.targetId, { rating: agg[0]?.avg || 0, ratingCount: agg[0]?.count || 0 });
-  }
-  return send(res, httpStatus.CREATED, review);
+export const createReview = async (req, res, next) => {
+  try {
+    const body = schema.parse(req.body);
+    const review = await Review.create({
+      user: req.user._id,
+      place: body.placeId,
+      activity: body.activityId,
+      rating: body.rating,
+      comment: body.comment || "",
+    });
+    res.status(201).json({ message: "Review created", data: { review } });
+  } catch (err) { next(err); }
 };
 
-export const listReviews = async (req, res) => {
-  const { skip, limit, page } = paginate(req.query);
-  const filter = {};
-  if (req.query.targetType) filter.targetType = req.query.targetType;
-  if (req.query.targetId) filter.targetId = req.query.targetId;
-  const items = await Review.find(filter).populate('user', 'name avatarUrl').skip(skip).limit(limit).sort({ createdAt: -1 });
-  const total = await Review.countDocuments(filter);
-  return send(res, httpStatus.OK, { items, page, total });
+export const listReviews = async (req, res, next) => {
+  try {
+    const filter = {};
+    if (req.query.placeId?.length === 24) filter.place = req.query.placeId;
+    if (req.query.activityId?.length === 24) filter.activity = req.query.activityId;
+    const reviews = await Review.find(filter).populate("user", "name").sort({ createdAt: -1 });
+    res.json({ data: { reviews } });
+  } catch (err) { next(err); }
+};
+
+export const deleteReview = async (req, res, next) => {
+  try {
+    const review = await Review.findById(req.params.id);
+    if (!review) throw createError(404, "Review not found");
+    // allow owner or admin
+    const isOwner = review.user?.toString() === req.user?._id?.toString();
+    const isAdmin = req.user?.role === "admin";
+    if (!isOwner && !isAdmin) throw createError(403, "Forbidden");
+    await review.deleteOne();
+    res.json({ message: "Review deleted", data: { id: req.params.id } });
+  } catch (err) { next(err); }
 };

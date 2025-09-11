@@ -2,19 +2,23 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import path from 'node:path';
-import { fileURLToPath } from 'node.URL';
+import { fileURLToPath } from 'node:url';
+import { pathToFileURL } from 'node:url';
 
 // Resolve project root so relative imports work regardless of CWD
-const __filename = fileURLToPath(import.meta.URL);
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 
-// Import models (ESM paths)
-const Place = (await import(path.join(root, 'models/Place.js'))).default;
-const Activity = (await import(path.join(root, 'models/Activity.js'))).default;
+// Import models (ESM paths) - Fixed for Windows
+const placePath = pathToFileURL(path.join(root, 'models/Place.js')).href;
+const activityPath = pathToFileURL(path.join(root, 'models/Activity.js')).href;
+
+const Place = (await import(placePath)).default;
+const Activity = (await import(activityPath)).default;
 
 // ---- Settings ----
-const MONGO_URL = process.env.MONGO_URL || process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/tour-guide';
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/tour-guide';
 const CITY = process.env.SEED_CITY || 'Kolkata';
 const COUNTRY = process.env.SEED_COUNTRY || 'India';
 
@@ -31,9 +35,9 @@ const PLACES = [
   { name: 'Jorasanko Thakur Bari', category: 'cultural' },
   { name: 'Indian Museum', category: 'art' },
   { name: 'Metropolitan Building', category: 'cultural' },
-  { name: 'St. Paul’s Cathedral', category: 'cultural' },
+  { name: 'St. Paul\'s Cathedral', category: 'cultural' },
   { name: 'Town Hall', category: 'cultural' },
-  { name: 'Writers’ Building', category: 'cultural' },
+  { name: 'Writers\' Building', category: 'cultural' },
   { name: 'Dakshineswar Kali Temple', category: 'spiritual' },
   { name: 'Belur Math', category: 'spiritual' },
   { name: 'Kalighat Temple', category: 'spiritual' },
@@ -56,11 +60,11 @@ const PLACES = [
   { name: 'Chinatown (Tiretta Bazaar & Tangra)', category: 'food' },
 ];
 
-// Each activity optionally references a place by name; we’ll resolve to placeId
+// Each activity optionally references a place by name; we'll resolve to placeId
 const ACTIVITIES = [
-  { title: 'Victoria Memorial Heritage Walk', category: 'cultural', price: 699,  durationMinutes: 90,  placeName: 'Victoria Memorial' },
-  { title: 'Howrah Bridge Sunrise Photo Tour', category: 'cultural', price: 599,  durationMinutes: 75,  placeName: 'Howrah Bridge' },
-  { title: 'Prinsep Ghat Sunset Boat Ride', category: 'nature',   price: 899,  durationMinutes: 60,  placeName: 'Prinsep Ghat' },
+  { title: 'Victoria Memorial Heritage Walk', category: 'cultural', price: 699, durationMinutes: 90, placeName: 'Victoria Memorial' },
+  { title: 'Howrah Bridge Sunrise Photo Tour', category: 'cultural', price: 599, durationMinutes: 75, placeName: 'Howrah Bridge' },
+  { title: 'Prinsep Ghat Sunset Boat Ride', category: 'nature', price: 899, durationMinutes: 60, placeName: 'Prinsep Ghat' },
   { title: 'Marble Palace Art & Architecture Tour', category: 'art', price: 799, durationMinutes: 80, placeName: 'Marble Palace' },
   { title: 'College Street Book-Hunting with Chai', category: 'cultural', price: 499, durationMinutes: 90, placeName: 'College Street' },
   { title: 'Park Street Food Crawl', category: 'food', price: 999, durationMinutes: 120, placeName: 'Park Street' },

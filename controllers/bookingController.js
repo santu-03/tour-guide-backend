@@ -1,74 +1,56 @@
-// import httpStatus from 'http-status';
-// import Booking from '../models/Booking.js';
-// import { BOOKING_STATUS } from '../config/constants.js';
-// import { paginate, send } from '../utils/helpers.js';
+import createError from "http-errors";
+import { z } from "zod";
+import { Booking } from "../models/Booking.js";
 
-// export const createBooking = async (req, res) => {
-//   const doc = await Booking.create({ ...req.body, user: req.user._id });
-//   return send(res, httpStatus.CREATED, doc);
-// };
+const createSchema = z.object({
+  placeId: z.string().length(24).optional(),
+  activityId: z.string().length(24).optional(),
+  date: z.coerce.date(),
+  peopleCount: z.number().int().min(1).max(50).optional(),
+  notes: z.string().max(500).optional(),
+}).refine((d) => d.placeId || d.activityId, { message: "placeId or activityId required" });
 
-// export const myBookings = async (req, res) => {
-//   const { skip, limit, page } = paginate(req.query);
-//   const items = await Booking.find({ user: req.user._id })
-//     .populate('payment')
-//     .skip(skip).limit(limit).sort({ createdAt: -1 });
-//   const total = await Booking.countDocuments({ user: req.user._id });
-//   return send(res, httpStatus.OK, { items, page, total });
-// };
-
-// export const updateStatus = async (req, res) => {
-//   const { status } = req.body;
-//   if (!Object.values(BOOKING_STATUS).includes(status))
-//     return res.status(httpStatus.BAD_REQUEST).json({ success: false, message: 'Invalid status' });
-//   const updated = await Booking.findByIdAndUpdate(req.params.id, { status }, { new: true });
-//   if (!updated) return res.status(httpStatus.NOT_FOUND).json({ success: false, message: 'Not found' });
-//   return send(res, httpStatus.OK, updated);
-// };
-
-
-
-
-import httpStatus from 'http-status';
-import mongoose from 'mongoose';
-import Booking from '../models/Booking.js';
-import { BOOKING_STATUS, ROLES } from '../config/constants.js';
-import { paginate, send } from '../utils/helpers.js';
-
-export const createBooking = async (req, res) => {
-  const doc = await Booking.create({ ...req.body, user: req.user._id });
-  return send(res, httpStatus.CREATED, doc);
+export const createBooking = async (req, res, next) => {
+  try {
+    const body = createSchema.parse(req.body);
+    const booking = await Booking.create({
+      user: req.user._id,
+      place: body.placeId,
+      activity: body.activityId,
+      date: body.date,
+      peopleCount: body.peopleCount || 1,
+      notes: body.notes || "",
+    });
+    res.status(201).json({ message: "Booking created", data: { booking } });
+  } catch (err) { next(err); }
 };
 
-export const myBookings = async (req, res) => {
-  const { skip, limit, page } = paginate(req.query);
-  const items = await Booking.find({ user: req.user._id })
-    .populate('payment')
-    .skip(skip).limit(limit).sort({ createdAt: -1 });
-  const total = await Booking.countDocuments({ user: req.user._id });
-  return send(res, httpStatus.OK, { items, page, total });
+export const myBookings = async (req, res, next) => {
+  try {
+    const bookings = await Booking.find({ user: req.user._id })
+      .populate("place", "name")
+      .populate("activity", "title")
+      .sort({ createdAt: -1 });
+    res.json({ data: { bookings } });
+  } catch (err) { next(err); }
 };
 
-export const updateStatus = async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
+export const allBookings = async (_req, res, next) => {
+  try {
+    const bookings = await Booking.find()
+      .populate("user", "name email role")
+      .populate("place", "name")
+      .populate("activity", "title")
+      .sort({ createdAt: -1 });
+    res.json({ data: { bookings } });
+  } catch (err) { next(err); }
+};
 
-  if (!mongoose.Types.ObjectId.isValid(id))
-    return res.status(httpStatus.BAD_REQUEST).json({ success: false, message: 'Invalid booking id' });
-
-  if (!Object.values(BOOKING_STATUS).includes(status))
-    return res.status(httpStatus.BAD_REQUEST).json({ success: false, message: 'Invalid status' });
-
-  const booking = await Booking.findById(id);
-  if (!booking) return res.status(httpStatus.NOT_FOUND).json({ success: false, message: 'Not found' });
-
-  const isOwner = booking.user.toString() === req.user._id.toString();
-  const isAdmin  = req.user.role === ROLES.ADMIN;
-  if (!isOwner && !isAdmin) {
-    return res.status(httpStatus.FORBIDDEN).json({ success: false, message: 'Forbidden' });
-  }
-
-  booking.status = status;
-  await booking.save();
-  return send(res, httpStatus.OK, booking);
+export const updateBookingStatus = async (req, res, next) => {
+  try {
+    const { status } = z.object({ status: z.enum(["pending", "confirmed", "cancelled"]) }).parse(req.body);
+    const booking = await Booking.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    if (!booking) throw createError(404, "Booking not found");
+    res.json({ message: "Status updated", data: { booking } });
+  } catch (err) { next(err); }
 };

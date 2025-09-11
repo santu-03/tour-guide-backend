@@ -1,16 +1,12 @@
-import { Router } from 'express';
-import { validate } from '../middleware/validation.js';
-import { authSchemas } from '../utils/validators.js';
-import { authLimiter } from '../middleware/rateLimiter.js';
-import { auth, requireSession } from '../middleware/auth.js';
-import { login, signup, refresh, logout, me } from '../controllers/authController.js';
+import { Router } from "express";
+import { signup, login, me } from "../controllers/authController.js";
+import { requireAuth } from "../middleware/auth.js";
+import { authLimiter } from "../middleware/rateLimiter.js";
 
 const r = Router();
 
-r.post('/signup', authLimiter, validate(authSchemas.signup), signup);
-r.post('/login', authLimiter, validate(authSchemas.login), login);
-r.post('/refresh', validate(authSchemas.refresh), refresh);
-r.post('/logout', requireSession, logout);
-r.get('/me', auth, me);
+r.post("/signup", authLimiter, signup);
+r.post("/login", authLimiter, login);
+r.get("/me", requireAuth, me);
 
 export default r;

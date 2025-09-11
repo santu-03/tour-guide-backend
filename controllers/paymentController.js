@@ -1,106 +1,37 @@
-// // import httpStatus from 'http-status';
-// // import Payment from '../models/Payment.js';
-// // import Booking from '../models/Booking.js';
-// // import { createOrder, verifySignature } from '../services/paymentService.js';
-// // import { PAYMENT_STATUS } from '../config/constants.js';
-// // import { send } from '../utils/helpers.js';
+import createError from "http-errors";
+import { z } from "zod";
+import { Payment } from "../models/Payment.js";
 
-// // export const createRazorpayOrder = async (req, res) => {
-// //   const { bookingId } = req.body;
-// //   const booking = await Booking.findById(bookingId);
-// //   if (!booking) return res.status(httpStatus.NOT_FOUND).json({ success: false, message: 'Booking not found' });
+export const createPayment = async (req, res, next) => {
+  try {
+    const { amount, currency } = z.object({
+      amount: z.number().positive(),
+      currency: z.string().default("INR"),
+    }).parse(req.body);
 
-// //   const amountPaise = Math.round((booking.price.total || 0) * 100);
-// //   const order = await createOrder({ amount: amountPaise, receipt: bookingId });
+    const payment = await Payment.create({
+      amount,
+      currency,
+      provider: "mock",
+      status: "created",
+      providerRef: "MOCK-" + Date.now(),
+    });
 
-// //   const payment = await Payment.create({
-// //     provider: 'razorpay',
-// //     status: PAYMENT_STATUS.CREATED,
-// //     currency: order.currency,
-// //     amount: order.amount,
-// //     orderId: order.id,
-// //     booking: booking._id
-// //   });
-// //   booking.payment = payment._id;
-// //   await booking.save();
+    res.status(201).json({ message: "Payment created", data: { payment } });
+  } catch (err) { next(err); }
+};
 
-// //   return send(res, httpStatus.CREATED, { order, paymentId: payment._id });
-// // };
+export const markPaid = async (req, res, next) => {
+  try {
+    const payment = await Payment.findByIdAndUpdate(req.params.id, { status: "paid" }, { new: true });
+    if (!payment) throw createError(404, "Payment not found");
+    res.json({ message: "Payment marked paid", data: { payment } });
+  } catch (err) { next(err); }
+};
 
-// // export const verifyRazorpay = async (req, res) => {
-// //   const { order_id, razorpay_payment_id, razorpay_signature } = req.body;
-// //   const payment = await Payment.findOne({ orderId: order_id });
-// //   if (!payment) return res.status(httpStatus.NOT_FOUND).json({ success: false, message: 'Payment not found' });
-
-// //   const ok = verifySignature({ orderId: order_id, paymentId: razorpay_payment_id, signature: razorpay_signature });
-// //   if (!ok) {
-// //     payment.status = PAYMENT_STATUS.FAILED;
-// //     payment.paymentId = razorpay_payment_id;
-// //     payment.signature = razorpay_signature;
-// //     await payment.save();
-// //     return res.status(httpStatus.BAD_REQUEST).json({ success: false, message: 'Signature verification failed' });
-// //   }
-
-// //   payment.status = PAYMENT_STATUS.PAID;
-// //   payment.paymentId = razorpay_payment_id;
-// //   payment.signature = razorpay_signature;
-// //   await payment.save();
-
-// //   await Booking.updateOne({ _id: payment.booking }, { $set: { status: 'confirmed' } });
-
-// //   return send(res, httpStatus.OK, { verified: true });
-// // };
-
-
-// import httpStatus from 'http-status';
-// import Payment from '../models/Payment.js';
-// import Booking from '../models/Booking.js';
-// import { createOrder, verifySignature } from '../services/paymentService.js';
-// import { PAYMENT_STATUS } from '../config/constants.js';
-// import { send } from '../utils/helpers.js';
-
-// export const createRazorpayOrder = async (req, res) => {
-//   const { bookingId } = req.body;
-//   const booking = await Booking.findById(bookingId);
-//   if (!booking) return res.status(httpStatus.NOT_FOUND).json({ success: false, message: 'Booking not found' });
-
-//   const amountPaise = Math.round((booking.price.total || 0) * 100);
-//   const order = await createOrder({ amount: amountPaise, receipt: bookingId });
-
-//   const payment = await Payment.create({
-//     provider: 'razorpay',
-//     status: PAYMENT_STATUS.CREATED,
-//     currency: order.currency,
-//     amount: order.amount,
-//     orderId: order.id,
-//     booking: booking._id
-//   });
-//   booking.payment = payment._id;
-//   await booking.save();
-
-//   return send(res, httpStatus.CREATED, { order, paymentId: payment._id });
-// };
-
-// export const verifyRazorpay = async (req, res) => {
-//   const { order_id, razorpay_payment_id, razorpay_signature } = req.body;
-//   const payment = await Payment.findOne({ orderId: order_id });
-//   if (!payment) return res.status(httpStatus.NOT_FOUND).json({ success: false, message: 'Payment not found' });
-
-//   const ok = verifySignature({ orderId: order_id, paymentId: razorpay_payment_id, signature: razorpay_signature });
-//   if (!ok) {
-//     payment.status = PAYMENT_STATUS.FAILED;
-//     payment.paymentId = razorpay_payment_id;
-//     payment.signature = razorpay_signature;
-//     await payment.save();
-//     return res.status(httpStatus.BAD_REQUEST).json({ success: false, message: 'Signature verification failed' });
-//   }
-
-//   payment.status = PAYMENT_STATUS.PAID;
-//   payment.paymentId = razorpay_payment_id;
-//   payment.signature = razorpay_signature;
-//   await payment.save();
-
-//   await Booking.updateOne({ _id: payment.booking }, { $set: { status: 'confirmed' } });
-
-//   return send(res, httpStatus.OK, { verified: true });
-// };
+export const listPayments = async (_req, res, next) => {
+  try {
+    const payments = await Payment.find().sort({ createdAt: -1 });
+    res.json({ data: { payments } });
+  } catch (err) { next(err); }
+};

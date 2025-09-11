@@ -1,59 +1,29 @@
-// // models/Place.js
-// import mongoose from 'mongoose';
-
-// const placeSchema = new mongoose.Schema(
-//   {
-//     name: { type: String, required: true },
-//     description: String,
-//     tags: [String],
-//     location: {
-//       city: String,
-//       country: String,
-//       lat: Number,
-//       lng: Number
-//     },
-//     images: [String],
-//     // NEW:
-//     featured: { type: Boolean, default: false },
-
-//     rating: { type: Number, default: 0 },
-//     ratingCount: { type: Number, default: 0 },
-//     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
-//   },
-//   { timestamps: true }
-// );
-
-// export default mongoose.model('Place', placeSchema);
-
-
 import mongoose from "mongoose";
-const { Schema } = mongoose;
 
-const LocationSchema = new Schema({
-  city: String,
-  country: String,
-  coords: { type: { type: String, enum: ['Point'], default: 'Point' }, coordinates: [Number] } // [lng,lat]
-}, { _id:false });
+const placeSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true, index: true },
+    description: { type: String, default: "" },
+    location: {
+      city: { type: String, trim: true },
+      country: { type: String, trim: true, index: true },
+      // GeoJSON-like [lng, lat]
+      coordinates: { type: [Number], index: "2dsphere", default: undefined },
+    },
+    images: [{ type: String }],
+    tags: [{ type: String, index: true }],
+    isActive: { type: Boolean, default: true, index: true },
+  },
+  { timestamps: true }
+);
 
-const RatingSchema = new Schema({ avg: {type:Number, default:0}, count: {type:Number, default:0} }, { _id:false });
+placeSchema.set("toJSON", {
+  transform: (_doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
 
-const PlaceSchema = new Schema({
-  title: String,
-  name: String,
-  description: String,
-  category: String,
-  tags: [String],
-  location: LocationSchema,
-  images: [String],
-  featured: { type:Boolean, default:false },
-  approved: { type:Boolean, default:true },
-  rating: { type: RatingSchema, default: () => ({}) },
-}, { timestamps:true });
-
-PlaceSchema.index({ title:'text', name:'text', description:'text', category:'text', tags:'text', 'location.city':'text' });
-PlaceSchema.index({ featured:1, createdAt:-1 });
-PlaceSchema.index({ 'location.city':1 });
-
-PlaceSchema.set('toJSON', { virtuals:true, versionKey:false, transform:(_d,r)=>{ r.id=r._id; delete r._id; }});
-
-export default (mongoose.models.Place || mongoose.model('Place', PlaceSchema));
+export const Place = mongoose.model("Place", placeSchema);

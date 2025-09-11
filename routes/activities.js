@@ -1,18 +1,21 @@
-import { Router } from 'express';
-import { auth, authorize } from '../middleware/auth.js';
-import { validate } from '../middleware/validation.js';
-import { activitySchema } from '../utils/validators.js';
-import { upload } from '../middleware/upload.js';
-import { ROLES } from '../config/constants.js';
-import { createActivity, listActivities, getActivity, updateActivity, deleteActivity } from '../controllers/activityController.js';
+import { Router } from "express";
+import { requireAuth, requireRole } from "../middleware/auth.js";
+import { validateObjectIdParam } from "../middleware/objectIdParam.js";
+import {
+  createActivity,
+  listActivities,
+  getActivity,
+  updateActivity,
+  deleteActivity,
+} from "../controllers/activityController.js";
 
 const r = Router();
 
-r.get('/', listActivities);
-r.get('/:id', getActivity);
+r.get("/", listActivities);
+r.get("/:id", validateObjectIdParam("id"), getActivity);
 
-r.post('/', auth, authorize('instructor'), upload.array('images', 6), validate(activitySchema), createActivity);
-r.patch('/:id', auth, authorize('instructor'), upload.array('images', 6), updateActivity);
-r.delete('/:id', auth, authorize('instructor'), deleteActivity);
+r.post("/", requireAuth, requireRole("admin"), createActivity);
+r.put("/:id", requireAuth, requireRole("admin"), validateObjectIdParam("id"), updateActivity);
+r.delete("/:id", requireAuth, requireRole("admin"), validateObjectIdParam("id"), deleteActivity);
 
 export default r;

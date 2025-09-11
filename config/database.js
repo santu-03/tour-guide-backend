@@ -1,13 +1,14 @@
-import mongoose from 'mongoose';
-import logger from '../utils/logger.js';
+import mongoose from "mongoose";
 
-export const connectDB = async (URL) => {
+export const connectDB = async () => {
   try {
-    mongoose.set('strictQuery', true);
-    await mongoose.connect(URL);
-    logger.info('✅ MongoDB connected');
+    const uri = process.env.MONGO_URL || process.env.MONGO_URI;
+    if (!uri) throw new Error("MONGO_URL (or MONGO_URI) is missing");
+
+    await mongoose.connect(uri, { autoIndex: true });
+    console.log("✅ MongoDB connected");
   } catch (err) {
-    logger.error({ err }, '❌ MongoDB connection error');
+    console.error("❌ MongoDB connection failed:", err.message);
     process.exit(1);
   }
 };

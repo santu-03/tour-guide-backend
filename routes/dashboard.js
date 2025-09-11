@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import { auth, authorize } from '../middleware/auth.js';
-import { ROLES } from '../config/constants.js';
-import { overview } from '../controllers/dashboardController.js';
+import { Router } from "express";
+import { requireAuth, requireRole } from "../middleware/auth.js";
+import { summary } from "../controllers/dashboardController.js";
 
 const r = Router();
-r.get('/overview', auth, authorize(ROLES.ADMIN), overview);
+
+r.get("/summary", requireAuth, requireRole("admin"), summary);
 
 export default r;

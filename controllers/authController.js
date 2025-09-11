@@ -1,147 +1,82 @@
-// import jwt from 'jsonwebtoken';
-// import httpStatus from 'http-status';
-// import User from '../models/User.js';
-// import Session from '../models/Session.js';
-// import { send } from '../utils/helpers.js';
-// import { sendEmail } from '../services/emailService.js';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import createError from "http-errors";
+import { z } from "zod";
+import { User } from "../models/User.js";
 
-// const signAccess = (sub) =>
-//   jwt.sign({ sub }, process.env.JWT_ACCESS_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '15m' });
-// const signRefresh = (sub) =>
-//   jwt.sign({ sub }, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.REFRESH_EXPIRES_IN || '30d' });
+/** Get JWT secret at call time (supports either var) */
+const getJwtSecret = () => (process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || "").trim();
 
-// export const signup = async (req, res) => {
-//   const { name, email, password, role } = req.body;
-//   const exists = await User.findOne({ email });
-//   if (exists) return res.status(httpStatus.CONFLICT).json({ success: false, message: 'Email already registered' });
+const PUBLIC_ROLES = ["traveller", "guide", "instructor", "advisor"];
+const normalizeSignupRole = (role) => {
+  if (!role) return "traveller";
+  const r = String(role).toLowerCase();
+  return PUBLIC_ROLES.includes(r) ? r : "traveller"; // blocks self-admin
+};
 
-//   const user = await User.create({ name, email, password, role });
-//   await sendEmail({ to: email, subject: 'Welcome to Tour', html: `<p>Hi ${name}, welcome! 🎉</p>` });
-
-//   const accessToken = signAccess(user._id.toString());
-//   const refreshToken = signRefresh(user._id.toString());
-//   await Session.create({ user: user._id, refreshToken, userAgent: req.headers['user-agent'], ip: req.ip });
-
-//   return send(res, httpStatus.CREATED, {
-//     user: { id: user._id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl },
-//     tokens: { accessToken, refreshToken }
-//   });
-// };
-
-// export const login = async (req, res) => {
-//   const { email, password } = req.body;
-//   const user = await User.findOne({ email });
-//   if (!user || !(await user.compare(password))) {
-//     return res.status(httpStatus.UNAUTHORIZED).json({ success: false, message: 'Invalid credentials' });
-//   }
-//   const accessToken = signAccess(user._id.toString());
-//   const refreshToken = signRefresh(user._id.toString());
-//   await Session.create({ user: user._id, refreshToken, userAgent: req.headers['user-agent'], ip: req.ip });
-
-//   return send(res, httpStatus.OK, {
-//     user: { id: user._id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl },
-//     tokens: { accessToken, refreshToken }
-//   });
-// };
-
-// export const refresh = async (req, res) => {
-//   const { refreshToken } = req.body;
-//   try {
-//     const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-//     const session = await Session.findOne({ refreshToken, user: payload.sub, valid: true });
-//     if (!session) throw new Error('invalid');
-
-//     const accessToken = signAccess(payload.sub);
-//     return send(res, httpStatus.OK, { accessToken });
-//   } catch (_) {
-//     return res.status(httpStatus.UNAUTHORIZED).json({ success: false, message: 'Invalid refresh token' });
-//   }
-// };
-
-// export const logout = async (req, res) => {
-//   const { refreshToken } = req.body;
-//   await Session.updateOne({ refreshToken }, { $set: { valid: false } });
-//   return send(res, httpStatus.OK, { loggedOut: true });
-// };
-
-// export const me = async (req, res) => send(res, httpStatus.OK, req.user);
-
-
-
-
-import jwt from 'jsonwebtoken';
-import httpStatus from 'http-status';
-import User from '../models/User.js';
-import Session from '../models/Session.js';
-import { send } from '../utils/helpers.js';
-import { sendEmail } from '../services/emailService.js';
-
-const { JWT_ACCESS_SECRET, JWT_REFRESH_SECRET } = process.env;
-const ACCESS_TTL  = process.env.JWT_EXPIRES_IN     || '15m';
-const REFRESH_TTL = process.env.REFRESH_EXPIRES_IN || '30d';
-
-if (!JWT_ACCESS_SECRET || !JWT_REFRESH_SECRET) {
-  throw new Error('JWT_ACCESS_SECRET / JWT_REFRESH_SECRET missing in .env');
-}
-
-const signAccess  = (sub) => jwt.sign({ sub }, JWT_ACCESS_SECRET,  { expiresIn: ACCESS_TTL });
-const signRefresh = (sub) => jwt.sign({ sub }, JWT_REFRESH_SECRET, { expiresIn: REFRESH_TTL });
-
-export const signup = async (req, res) => {
-  const { name, email, password, role } = req.body;
-  const exists = await User.findOne({ email });
-  if (exists) {
-    return res.status(httpStatus.CONFLICT).json({ success: false, message: 'Email already registered' });
+const sign = (id) => {
+  const secret = getJwtSecret();
+  if (!secret) {
+    // Fail clearly if secret missing
+    throw createError(500, "JWT secret missing. Set JWT_ACCESS_SECRET or JWT_SECRET in .env");
   }
-
-  const user = await User.create({ name, email, password, role });
-  try { await sendEmail({ to: email, subject: 'Welcome to Tour', html: `<p>Hi ${name}, welcome! 🎉</p>` }); } catch {}
-
-  const accessToken  = signAccess(user._id.toString());
-  const refreshToken = signRefresh(user._id.toString());
-  await Session.create({ user: user._id, refreshToken, userAgent: req.headers['user-agent'], ip: req.ip });
-
-  return send(res, httpStatus.CREATED, {
-    user: { id: user._id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl },
-    tokens: { accessToken, refreshToken }
+  return jwt.sign({ id }, secret, {
+    expiresIn: (process.env.JWT_EXPIRES_IN || "15m").trim(),
   });
 };
 
-export const login = async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ email });
-  if (!user || !(await user.compare(password))) {
-    return res.status(httpStatus.UNAUTHORIZED).json({ success: false, message: 'Invalid credentials' });
-  }
+const signupSchema = z.object({
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6),
+  role: z.string().optional(), // sanitized to PUBLIC_ROLES
+});
 
-  const accessToken  = signAccess(user._id.toString());
-  const refreshToken = signRefresh(user._id.toString());
-  await Session.create({ user: user._id, refreshToken, userAgent: req.headers['user-agent'], ip: req.ip });
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+});
 
-  return send(res, httpStatus.OK, {
-    user: { id: user._id, name: user.name, email: user.email, role: user.role, avatarUrl: user.avatarUrl },
-    tokens: { accessToken, refreshToken }
-  });
-};
-
-export const refresh = async (req, res) => {
-  const { refreshToken } = req.body;
+export const signup = async (req, res, next) => {
   try {
-    const payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-    const session = await Session.findOne({ refreshToken, user: payload.sub, valid: true });
-    if (!session) throw new Error('invalid');
+    const body = signupSchema.parse(req.body);
+    const exists = await User.findOne({ email: body.email });
+    if (exists) return next(createError(409, "Email already registered"));
 
-    const accessToken = signAccess(payload.sub);
-    return send(res, httpStatus.OK, { accessToken });
-  } catch {
-    return res.status(httpStatus.UNAUTHORIZED).json({ success: false, message: 'Invalid refresh token' });
-  }
+    const hash = await bcrypt.hash(body.password, 10);
+    const user = await User.create({
+      name: body.name,
+      email: body.email,
+      password: hash,
+      role: normalizeSignupRole(body.role),
+    });
+
+    const token = sign(user._id.toString());
+    res.status(201).json({
+      message: "Signup successful",
+      data: { token, user: { id: user._id, name: user.name, email: user.email, role: user.role } },
+    });
+  } catch (err) { next(err); }
 };
 
-export const logout = async (req, res) => {
-  const { refreshToken } = req.body;
-  await Session.updateOne({ refreshToken }, { $set: { valid: false } });
-  return send(res, httpStatus.OK, { loggedOut: true });
+export const login = async (req, res, next) => {
+  try {
+    const body = loginSchema.parse(req.body);
+
+    const user = await User.findOne({ email: body.email }).select("+password");
+    if (!user) return next(createError(401, "Invalid credentials"));
+
+    const ok = await bcrypt.compare(body.password, user.password);
+    if (!ok) return next(createError(401, "Invalid credentials"));
+
+    const token = sign(user._id.toString());
+    res.json({
+      message: "Login successful",
+      data: { token, user: { id: user._id, name: user.name, email: user.email, role: user.role } },
+    });
+  } catch (err) { next(err); }
 };
 
-export const me = async (req, res) => send(res, httpStatus.OK, req.user);
+export const me = async (req, res) => {
+  res.json({ data: { user: req.user } });
+};

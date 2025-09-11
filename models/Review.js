@@ -1,15 +1,27 @@
-import mongoose from 'mongoose';
-import { TARGET_TYPE } from '../config/constants.js';
+import mongoose from "mongoose";
 
 const reviewSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    targetType: { type: String, enum: Object.values(TARGET_TYPE), required: true },
-    targetId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
-    rating: { type: Number, min: 1, max: 5, required: true },
-    comment: { type: String, default: '' }
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    place: { type: mongoose.Schema.Types.ObjectId, ref: "Place", index: true },      // either place or activity
+    activity: { type: mongoose.Schema.Types.ObjectId, ref: "Activity", index: true },// either activity or place
+    rating: { type: Number, min: 1, max: 5, required: true, index: true },
+    comment: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
-export default mongoose.model('Review', reviewSchema);
+// Useful indexes; keep non-unique to avoid conflicts unless you want to restrict to 1 review per pair
+reviewSchema.index({ user: 1, place: 1 });
+reviewSchema.index({ user: 1, activity: 1 });
+
+reviewSchema.set("toJSON", {
+  transform: (_doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
+export const Review = mongoose.model("Review", reviewSchema);

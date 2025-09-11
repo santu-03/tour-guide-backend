@@ -1,17 +1,24 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const campaignSchema = new mongoose.Schema(
   {
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    name: { type: String, required: true },
-    status: { type: String, enum: ['draft','active','paused','completed'], default: 'draft' },
-    budget: { type: Number, default: 0 },
-    startsAt: { type: Date, required: true },
-    endsAt: { type: Date, required: true },
-    impressions: { type: Number, default: 0 },
-    clicks: { type: Number, default: 0 }
+    title: { type: String, required: true, trim: true, index: true },
+    goalAmount: { type: Number, required: true, min: 1 },
+    raisedAmount: { type: Number, default: 0, min: 0 },
+    description: { type: String, default: "" },
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    status: { type: String, enum: ["draft", "active", "completed"], default: "draft", index: true },
   },
   { timestamps: true }
 );
 
-export default mongoose.model('Campaign', campaignSchema);
+campaignSchema.set("toJSON", {
+  transform: (_doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  },
+});
+
+export const Campaign = mongoose.model("Campaign", campaignSchema);
