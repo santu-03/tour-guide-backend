@@ -2,10 +2,10 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath } from 'node.URL';
 
 // Resolve project root so relative imports work regardless of CWD
-const __filename = fileURLToPath(import.meta.url);
+const __filename = fileURLToPath(import.meta.URL);
 const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
 
@@ -14,7 +14,7 @@ const Place = (await import(path.join(root, 'models/Place.js'))).default;
 const Activity = (await import(path.join(root, 'models/Activity.js'))).default;
 
 // ---- Settings ----
-const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/tour-guide';
+const MONGO_URL = process.env.MONGO_URL || process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/tour-guide';
 const CITY = process.env.SEED_CITY || 'Kolkata';
 const COUNTRY = process.env.SEED_COUNTRY || 'India';
 
@@ -133,9 +133,9 @@ async function upsertActivity(a, placeId) {
 async function run() {
   const reset = process.argv.includes('--reset') || process.argv.includes('--drop');
 
-  console.log('⏳ Connecting MongoDB:', MONGO_URI);
+  console.log('⏳ Connecting MongoDB:', MONGO_URL);
   mongoose.set('strictQuery', true);
-  await mongoose.connect(MONGO_URI, { autoIndex: true });
+  await mongoose.connect(MONGO_URL, { autoIndex: true });
   console.log('✅ Connected');
 
   if (reset) {

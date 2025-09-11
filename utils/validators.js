@@ -69,3 +69,14 @@ export const campaignSchema = Joi.object({
   startsAt: Joi.date().iso().required(),
   endsAt: Joi.date().iso().min(Joi.ref('startsAt')).required()
 });
+
+export const mediaSchema = Joi.object({
+  uploadType: Joi.string().valid('places', 'activities', 'profiles', 'reviews', 'campaigns').default('places'),
+  tags: Joi.alternatives().try(
+    Joi.array().items(Joi.string().trim().min(1).max(50)),
+    Joi.string().trim().min(1).max(50)
+  ).default([]),
+  title: Joi.string().trim().min(1).max(100).optional(),
+  description: Joi.string().trim().max(500).optional(),
+  altText: Joi.string().trim().min(1).max(200).optional()
+});
