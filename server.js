@@ -205,7 +205,7 @@ if (!process.env.JWT_ACCESS_SECRET && !process.env.JWT_SECRET) {
 /* ----------------------------- CORS setup ------------------------------ */
 const allowlist = [
   ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(",") : []),
-  ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : []),
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
 ]
   .map((s) => s.trim())
   .filter(Boolean);
