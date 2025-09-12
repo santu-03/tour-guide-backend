@@ -186,6 +186,8 @@ import helmet from "helmet";
 import cors from "cors";
 import morgan from "morgan";
 import mongoose from "mongoose";
+import axios from "axios";
+
 
 import { connectDB } from "./config/database.js";
 import apiRouter from "./routes/index.js";
@@ -234,6 +236,9 @@ app.get("/health", (_req, res) =>
     uptime: process.uptime(),
     ts: Date.now(),
     corsAllowlist: allowlist, // helpful for debugging
+
+
+
   })
 );
 
@@ -252,9 +257,31 @@ let server;
 async function start() {
   try {
     await connectDB(); // uses MONGO_URL (or MONGO_URI fallback)
+    // server = app.listen(PORT, () => {
+    //   console.log(`🚀 API running on http://localhost:${PORT}`);
+    // });
     server = app.listen(PORT, () => {
-      console.log(`🚀 API running on http://localhost:${PORT}`);
-    });
+  console.log(`🚀 API running on http://localhost:${PORT}`);
+
+  // 🔁 Periodic self-ping (every 1 minute)
+  const pingUrl =
+    process.env.NODE_ENV === "development"
+      ? "https://tour-guide-backend-ygiv.onrender.com"
+      : `http://localhost:${PORT}/health`;
+
+  setInterval(async () => {
+    try {
+      await axios.get(pingUrl);
+      console.log("[SELF-PING] Success. Server responding OK.");
+    } catch (err) {
+      console.error("[SELF-PING ERROR]:", err.message);
+    }
+  }, 60_000); // 1 minute
+});
+
+
+
+
   } catch (err) {
     console.error("❌ Failed to start server:", err?.message || err);
     process.exit(1);
