@@ -18,7 +18,7 @@ const Place = (await import(placePath)).default;
 const Activity = (await import(activityPath)).default;
 
 // ---- Settings ----
-const MONGO_URL = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/tour-guide';
+const MONGO_URL = process.env.MONGO_URL 
 const CITY = process.env.SEED_CITY || 'Kolkata';
 const COUNTRY = process.env.SEED_COUNTRY || 'India';
 
