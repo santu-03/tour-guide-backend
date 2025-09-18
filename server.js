@@ -7,6 +7,7 @@ import mongoose from "mongoose";
 import axios from "axios";
 import { fileURLToPath } from 'url';
 import path from 'path';
+import compression from "compression";
 
 import { connectDB } from "./config/database.js";
 import apiRouter from "./routes/index.js";

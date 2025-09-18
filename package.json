@@ -1,3 +1,4 @@
+
 {
   "name": "backend",
   "version": "1.0.0",
@@ -5,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+   "seed": "node scripts/seedCompleteData.js"
   },
   "type": "module",
   "dependencies": {
@@ -36,9 +38,9 @@
     "pino-pretty": "^11.2.2",
     "razorpay": "^2.9.4",
     "readline-sync": "^1.4.10",
-    "socket.io": "^4.8.1",
     "xss": "^1.0.15",
-    "zod": "^4.1.7"
+    "zod": "^4.1.7",
+   "axios": "^1.7.7"
   },
   "devDependencies": {
     "eslint": "^9.9.0",

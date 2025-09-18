@@ -7,13 +7,17 @@ import {
   updateActivity,
   deleteActivity,
 } from '../controllers/activityController.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { validateObjectIdParam } from '../middleware/objectIdParam.js';
 
 const router = Router();
 
 router.get('/', listActivities);
 router.get('/:id', getActivity);
-router.post('/', createActivity);
-router.patch('/:id', updateActivity);
-router.delete('/:id', deleteActivity);
+router.get('/:id', validateObjectIdParam('id'), getActivity);
+router.post('/', requireAuth, requireRole('admin'), createActivity);
+router.patch('/:id', requireAuth, requireRole('admin'), validateObjectIdParam('id'), updateActivity);
+router.delete('/:id', requireAuth, requireRole('admin'), validateObjectIdParam('id'), deleteActivity);
+
 
 export default router;

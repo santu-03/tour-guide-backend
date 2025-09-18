@@ -1,8 +1,9 @@
-import User from '../models/User.js';
-import Booking from '../models/Booking.js';
-import Activity from '../models/Activity.js';
-import Place from '../models/Place.js';
-// import Payment from '../models/Payment.js';
+import { User } from '../models/User.js';
+import { Booking } from '../models/Booking.js';
+import { Activity } from '../models/Activity.js';
+import { Place } from '../models/Place.js';
+import { Payment } from '../models/Payment.js';
+
 import dayjs from 'dayjs';
 
 export const overviewStats = async () => {
