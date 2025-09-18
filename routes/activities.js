@@ -1,21 +1,19 @@
-import { Router } from "express";
-import { requireAuth, requireRole } from "../middleware/auth.js";
-import { validateObjectIdParam } from "../middleware/objectIdParam.js";
+// routes/activities.js
+import { Router } from 'express';
 import {
-  createActivity,
   listActivities,
   getActivity,
+  createActivity,
   updateActivity,
   deleteActivity,
-} from "../controllers/activityController.js";
+} from '../controllers/activityController.js';
 
-const r = Router();
+const router = Router();
 
-r.get("/", listActivities);
-r.get("/:id", validateObjectIdParam("id"), getActivity);
+router.get('/', listActivities);
+router.get('/:id', getActivity);
+router.post('/', createActivity);
+router.patch('/:id', updateActivity);
+router.delete('/:id', deleteActivity);
 
-r.post("/", requireAuth, requireRole("admin"), createActivity);
-r.put("/:id", requireAuth, requireRole("admin"), validateObjectIdParam("id"), updateActivity);
-r.delete("/:id", requireAuth, requireRole("admin"), validateObjectIdParam("id"), deleteActivity);
-
-export default r;
+export default router;
